@@ -49,7 +49,8 @@ export default function App() {
   const [view, setView] = useState("dashboard");
   const [selectedCreditor, setSelectedCreditor] = useState(null);
   const [projMonths, setProjMonths] = useState(6);
-  const [form, setForm] = useState({ creditor: "", value: "", interestRate: "", interestType: "none", description: "", startDate: new Date().toISOString().slice(0,10) });
+  // eslint-disable-next-line no-unused-vars
+const [form, setForm] = useState({ creditor: "", value: "", interestRate: "", interestType: "none", description: "", startDate: new Date().toISOString().slice(0,10) });
   const [payForm, setPayForm] = useState({ loanId: null, amount: "", date: new Date().toISOString().slice(0,10), note: "" });
   const [showPayModal, setShowPayModal] = useState(false);
   const [expandedLoan, setExpandedLoan] = useState(null);
