@@ -6,31 +6,52 @@ function formatBRL(v) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 }
 
-function calcProjection(loan, months) {
-  const { value, interestRate, interestType, payments = [] } = loan;
-  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-  let remaining = value - totalPaid;
-  const rows = [];
+function monthsDiff(dateStr) {
+  const start = new Date(dateStr);
   const today = new Date();
+  return (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
+}
+
+function calcCurrentBalance(loan) {
+  const { value, interestRate, interestType, startDate, payments = [] } = loan;
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+  const elapsed = startDate ? Math.max(0, monthsDiff(startDate)) : 0;
+  const rate = interestRate / 100;
+
+  let balanceWithInterest = value;
+  if (interestType === "simple" && rate > 0 && elapsed > 0) {
+    balanceWithInterest = value + (value * rate * elapsed);
+  } else if (interestType === "compound" && rate > 0 && elapsed > 0) {
+    balanceWithInterest = value * Math.pow(1 + rate, elapsed);
+  }
+
+  return Math.max(0, balanceWithInterest - totalPaid);
+}
+
+function calcProjection(loan, months) {
+  const { interestRate, interestType } = loan;
+  const today = new Date();
+  const rows = [];
+  let currentBalance = calcCurrentBalance(loan);
 
   if (interestType === "none" || !interestRate) {
     for (let i = 1; i <= months; i++) {
       const d = new Date(today);
       d.setMonth(d.getMonth() + i);
-      rows.push({ month: d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }), balance: remaining, interest: 0 });
+      rows.push({ month: d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }), balance: currentBalance, interest: 0 });
     }
   } else if (interestType === "simple") {
     const rate = interestRate / 100;
     for (let i = 1; i <= months; i++) {
-      const interest = value * rate * i;
-      const bal = (value - totalPaid) + interest;
+      const interest = currentBalance * rate * i;
+      const bal = currentBalance + interest;
       const d = new Date(today);
       d.setMonth(d.getMonth() + i);
-      rows.push({ month: d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }), balance: Math.max(0, bal), interest: interest });
+      rows.push({ month: d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }), balance: Math.max(0, bal), interest });
     }
   } else {
     const rate = interestRate / 100;
-    let bal = remaining;
+    let bal = currentBalance;
     for (let i = 1; i <= months; i++) {
       const interest = bal * rate;
       bal = bal + interest;
@@ -41,6 +62,7 @@ function calcProjection(loan, months) {
   }
   return rows;
 }
+
 
 export default function App() {
   const [loans, setLoans] = useState(() => {
@@ -207,8 +229,7 @@ export default function App() {
 
 
   function getLoanBalance(loan) {
-    const paid = (loan.payments || []).reduce((s,p) => s+p.amount, 0);
-    return Math.max(0, loan.value - paid);
+    return calcCurrentBalance(loan);
   }
 
   function getCreditorColor(creditor) {
