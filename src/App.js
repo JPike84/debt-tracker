@@ -185,10 +185,14 @@ export default function App() {
     return map;
   }, [loans]);
 
+  const totalOriginal = useMemo(() => loans.reduce((s, l) => s + l.value, 0), [loans]);
+
   const totalDebt = useMemo(() => loans.reduce((s, l) => {
     const paid = (l.payments || []).reduce((a,p) => a+p.amount, 0);
     return s + Math.max(0, l.value - paid);
   }, 0), [loans]);
+
+  const totalUpdatedDebt = useMemo(() => loans.reduce((s, l) => s + calcCurrentBalance(l), 0), [loans]);
 
   function addLoan() {
     if (!form.creditor || !form.value) return;
@@ -261,15 +265,17 @@ export default function App() {
             {/* Summary cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16, marginBottom: 32 }}>
               {[
-                { label: "Total em Dívidas", value: formatBRL(totalDebt), icon: "💰", color: "#FF6B6B" },
+                { label: "Empréstimos Feitos", value: formatBRL(totalOriginal), icon: "💰", color: "#45B7D1" },
+                { label: "Dívidas Atualizadas", value: formatBRL(totalUpdatedDebt), icon: "📈", color: "#FF6B6B", highlight: true },
                 { label: "Credores", value: Object.keys(creditors).length, icon: "🏦", color: "#4ECDC4" },
-                { label: "Empréstimos", value: loans.length, icon: "📋", color: "#45B7D1" },
-                { label: "Total Pago", value: formatBRL(loans.reduce((s,l)=>(l.payments||[]).reduce((a,p)=>a+p.amount,s),0)), icon: "✅", color: "#96CEB4" },
+                { label: "Empréstimos", value: loans.length, icon: "📋", color: "#96CEB4" },
+                { label: "Total Pago", value: formatBRL(loans.reduce((s,l)=>(l.payments||[]).reduce((a,p)=>a+p.amount,s),0)), icon: "✅", color: "#FFEAA7" },
               ].map((c,i) => (
-                <div key={i} style={{ background: "#1A1D2E", borderRadius: 16, padding: "20px", border: `1px solid ${c.color}22` }}>
+                <div key={i} style={{ background: c.highlight ? "linear-gradient(135deg,#FF6B6B22,#FF6B6B11)" : "#1A1D2E", borderRadius: 16, padding: "20px", border: c.highlight ? "1px solid #FF6B6B66" : `1px solid ${c.color}22` }}>
                   <div style={{ fontSize: 28, marginBottom: 8 }}>{c.icon}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: c.color }}>{c.value}</div>
                   <div style={{ fontSize: 12, color: "#8B8FA8", marginTop: 4 }}>{c.label}</div>
+                  {c.highlight && totalUpdatedDebt > totalOriginal && <div style={{ fontSize: 11, color: "#FF6B6B", marginTop: 4 }}>+{formatBRL(totalUpdatedDebt - totalOriginal)} em juros</div>}
                 </div>
               ))}
             </div>
